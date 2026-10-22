@@ -52,5 +52,21 @@ namespace lr2_1.Tests
             Assert.NotNull(result);
             Assert.Equal("Вираз не може бути порожнім.", result.ViewData["Result"]);
         }
+        [Fact]
+        public void Calculate_SyntaxError_ReturnsSyntaxErrorMessage()
+        {
+            // Arrange
+            var controller = new HomeController();
+
+            // Act
+            var result = controller.Calculate("2 ++ 3 *") as ViewResult;
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.True(
+                result.ViewData["Result"]?.ToString()?.StartsWith("Помилка:") == true,
+                "Очікувалося повідомлення про помилку"
+            );
+        }
     }
 }
