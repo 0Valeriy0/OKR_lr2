@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using OKR_lr2_1.Models;
+using System.Data;
 using System.Diagnostics;
 
 namespace OKR_lr2_1.Controllers
@@ -10,16 +10,32 @@ namespace OKR_lr2_1.Controllers
         {
             return View();
         }
-
-        public IActionResult Privacy()
+        public IActionResult Calculate(string expression)
         {
+            if (string.IsNullOrWhiteSpace(expression))
+            {
+                ViewBag.Result = "Вираз не може бути порожнім.";
+                return View();
+            }
+            try
+            {
+                DataTable table = new DataTable();
+                var result = table.Compute(expression, string.Empty);
+                ViewBag.Result = result;
+            }
+            catch (DivideByZeroException)
+            {
+                ViewBag.Result = "Помилка: Ділення на нуль.";
+            }
+            catch (SyntaxErrorException)
+            {
+                ViewBag.Result = "Помилка: Неправильний синтаксис виразу.";
+            }
+            catch (Exception)
+            {
+                ViewBag.Result = "Помилка: Некоректний вираз.";
+            }
             return View();
-        }
-
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
     }
 }
