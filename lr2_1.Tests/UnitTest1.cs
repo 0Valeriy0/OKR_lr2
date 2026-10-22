@@ -32,7 +32,25 @@ namespace lr2_1.Tests
 
             // Assert
             Assert.NotNull(result);
-            Assert.Equal(expectedResult, result.ViewData["Result"]);
+
+            var actualResult = Convert.ToDouble(result.ViewData["Result"]);
+            Assert.Equal(expectedResult, actualResult);
+        }
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void Calculate_EmptyOrNullExpression_ReturnsEmptyMessage(string expression)
+        {
+            // Arrange
+            var controller = new HomeController();
+
+            // Act
+            var result = controller.Calculate(expression) as ViewResult;
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal("Вираз не може бути порожнім.", result.ViewData["Result"]);
         }
     }
 }
