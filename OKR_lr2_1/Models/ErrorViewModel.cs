@@ -1,4 +1,4 @@
-namespace OKR_lr2_1.Models
+﻿namespace OKR_lr2_1.Models
 {
     public class ErrorViewModel
     {
