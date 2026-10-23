@@ -22,7 +22,7 @@ namespace lr2_1.Tests
         [InlineData("2 * 3", 6)]
         [InlineData("10 - 3 * 2", 4)]
         [InlineData("(5 + 5) / 2", 5)]
-        public void Calculate_ValidExpression_ReturnsCorrectResult(string expression, object expectedResult)
+        public void Calculate_ValidExpression_ReturnsCorrectResult(string expression, double expectedResult)
         {
             // Arrange
             var controller = new HomeController();
@@ -67,6 +67,33 @@ namespace lr2_1.Tests
                 result.ViewData["Result"]?.ToString()?.StartsWith("Помилка:") == true,
                 "Очікувалося повідомлення про помилку"
             );
+        }
+        [Fact]
+        public void Calculate_DivisionByZero_ReturnsDivisionByZeroMessage()
+        {
+            // Arrange
+            var controller = new HomeController();
+            // Act
+            var result = controller.Calculate("10 / 0") as ViewResult;
+            // Assert
+            Assert.NotNull(result);
+            Assert.Throws<DivideByZeroException>(() => Convert.ToDouble(result.ViewData["Result"]));
+        }
+        [Theory]
+        [InlineData("8 - -4 * (2 + -3 * 2)", -8)]
+        [InlineData("26 - 3.5 * 2.5 * 4", -9)]
+        [InlineData("2.5 * 4.2 - 1.1 / 0.5", 8.3)]
+        [InlineData(" -3 + -3 + -1 * -2 / -1", -8)]
+        public void Calculate_ComplexExpression_ReturnsCorrectResult(string expression, double expectedResult)
+        {
+            // Arrange
+            var controller = new HomeController();
+            // Act
+            var result = controller.Calculate(expression) as ViewResult;
+            // Assert
+            Assert.NotNull(result);
+            var actualResult = Convert.ToDouble(result.ViewData["Result"]);
+            Assert.Equal(expectedResult, actualResult);
         }
     }
 }
