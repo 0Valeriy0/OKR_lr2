@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using OKR_lr2_1.Models;
 using System.Data;
 using System.Diagnostics;
 
@@ -14,27 +16,23 @@ namespace OKR_lr2_1.Controllers
         {
             if (string.IsNullOrWhiteSpace(expression))
             {
-                ViewBag.Result = "Вираз не може бути порожнім.";
+                ViewBag.Result = "Вираз не може бути порожнім";
                 return View();
             }
+            Expression exp = new Expression { ExpressionText = expression };
             try
             {
                 DataTable table = new DataTable();
-                var result = table.Compute(expression, string.Empty);
-                ViewBag.Result = result;
+                var result = (double?)table.Compute(expression, string.Empty);
+                if (result == double.PositiveInfinity || result == double.NegativeInfinity || result == null) throw new DivideByZeroException();
+                exp.Result = result; 
             }
-            catch (DivideByZeroException)
+            catch (Exception ex)
             {
-                ViewBag.Result = "Помилка: Ділення на нуль.";
+                exp.Error = ex.Message;
+                exp.IsError = true;
             }
-            catch (SyntaxErrorException)
-            {
-                ViewBag.Result = "Помилка: Неправильний синтаксис виразу.";
-            }
-            catch (Exception)
-            {
-                ViewBag.Result = "Помилка: Некоректний вираз.";
-            }
+            ViewBag.Result = exp;
             return View();
         }
     }
