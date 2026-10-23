@@ -1,8 +1,105 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Калькулятор";
 }
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <link href="~/css/site.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+    <div class="calculator-case">
+        <!-- ВЕРХНЯ ПАНЕЛЬ: ЛОГОТИП + СОНЯЧНА БАТАРЕЯ + ДИСПЛЕЙ -->
+        <header class="display-panel">
+            <div class="panel-header">
+                <span class="brand">SHARP</span>
+                <!-- Сонячна батарея праворуч як у EL-128C -->
+                <div class="solar-cell">
+                    <span></span><span></span><span></span><span></span>
+                </div>
+            </div>
+
+            <!-- LCD екран -->
+            <div class="lcd-screen">
+                <div class="lcd-indicators">
+                    <span class="ind-step">01</span>
+                    <span class="ind-icon">M</span>
+                    <span class="ind-icon">+TAX</span>
+                </div>
+                <div class="lcd-digits" id="display">123456789012.</div>
+            </div>
+
+            <div class="model-name">ELSI MATE EL-128C</div>
+        </header>
+
+        <!-- КЛАВІАТУРНА ПАНЕЛЬ: 5 КОЛОНОК -->
+        <main class="keypad-body">
+            <div class="keypad-grid">
+
+                <!-- РЯДОК 1 -->
+                <button class="btn btn-light" data-val="prev">PREV ▲</button>
+                <button class="btn btn-light text-green" data-val="auto-replay">AUTO<br>REPLAY</button>
+                <!-- Додані дужки ( та ) у вільні слоти першого рядка -->
+                <button class="btn btn-light" data-val="(">(</button>
+                <button class="btn btn-light" data-val=")">)</button>
+                <div class="empty-cell"></div>
+
+                <!-- РЯДОК 2 -->
+                <button class="btn btn-light" data-val="next">NEXT ▼</button>
+                <button class="btn btn-light text-green" data-val="correct">CORRECT</button>
+                <button class="btn btn-light text-orange labeled-btn" data-val="tax-plus">
+                    <span class="sub-label">RATE SET</span>+TAX
+                </button>
+                <button class="btn btn-light text-orange labeled-btn" data-val="tax-minus">
+                    <span class="sub-label">RATE RECALL</span>−TAX
+                </button>
+                <button class="btn btn-light" data-val="CA">CA</button>
+
+				<!-- РЯДОК 3 -->
+                <button class="btn btn-light" data-val="R-CM">R•CM</button>
+                <button class="btn btn-light" data-val="M-">M−</button>
+                <button class="btn btn-light" data-val="M+">M+</button>
+                <button class="btn btn-light" data-val="rate">RATE</button>
+                <button class="btn btn-red labeled-btn" data-val="CE">
+                    <span class="sub-label">ON</span>CE
+                </button>
+
+                <!-- РЯДОК 4 -->
+                <button class="btn btn-dark" data-val="7">7</button>
+                <button class="btn btn-dark" data-val="8">8</button>
+                <button class="btn btn-dark" data-val="9">9</button>
+                <button class="btn btn-light" data-val="%">%</button>
+                <button class="btn btn-light" data-val="backspace">→</button>
+
+                <!-- РЯДОК 5 -->
+                <button class="btn btn-dark" data-val="4">4</button>
+                <button class="btn btn-dark" data-val="5">5</button>
+                <button class="btn btn-dark" data-val="6">6</button>
+                <button class="btn btn-light" data-val="*">×</button>
+                <button class="btn btn-light" data-val="/">÷</button>
+
+                <!-- РЯДОК 6 -->
+                <button class="btn btn-dark" data-val="1">1</button>
+                <button class="btn btn-dark" data-val="2">2</button>
+                <button class="btn btn-dark" data-val="3">3</button>
+                <!-- Велика кнопка + займає 2 рядки у 4-й колонці -->
+                <button class="btn btn-light btn-tall-plus" data-val="+">+</button>
+                <button class="btn btn-light" data-val="-">−</button>
+
+                <!-- РЯДОК 7 -->
+                <button class="btn btn-dark" data-val="0">0</button>
+                <button class="btn btn-dark" data-val="00">00</button>
+                <button class="btn btn-dark" data-val=".">.</button>
+                <!-- Сюди заходить нижня частина кнопки + -->
+                <button class="btn btn-light" data-val="=">=</button>
+
+            </div>
+        </main>
+    </div>
+
+</body>
+</html>
