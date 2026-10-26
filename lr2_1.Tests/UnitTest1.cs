@@ -95,5 +95,17 @@ namespace lr2_1.Tests
             var actualResult = Convert.ToDouble(result.ViewData["Result"]);
             Assert.Equal(expectedResult, actualResult);
         }
+        [Fact]
+        public void Calculate_ModuloExpression_ReturnsCorrectResult()
+        {
+            // Arrange
+            var controller = new HomeController();
+            // Act
+            var result = controller.Calculate("10 % 3") as ViewResult;
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(1, result.ViewData["Result"]);
+
+        }
     }
 }
