@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using OKR_lr2_1.Models;
 using System.Data;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace OKR_lr2_1.Controllers
 {
@@ -22,26 +23,51 @@ namespace OKR_lr2_1.Controllers
             return View();
         }
 
-        [HttpGet("Calculate/{expression}")]
+        [HttpGet("Calculate")]
         public IActionResult Calculate(string expression)
         {
-            if (string.IsNullOrWhiteSpace(expression))
-            {
-                ViewBag.Result = "Вираз не може бути порожнім";
-                return View();
-            }
-
             Expression exp = new Expression { ExpressionText = expression };
 
             try
             {
                 DataTable table = new DataTable();
-                var result = (double?)table.Compute(expression, string.Empty);
-                if (result == double.PositiveInfinity || result == double.NegativeInfinity || result == null) throw new DivideByZeroException();
+                double result;
+                var match = Regex.Match(expression.Trim(), @"^(-?\d+(?:\.\d+)?)\s*%\s*(-?\d+(?:\.\d+)?)$");
+
+                if (match.Success)
+                {
+                    double left = double.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+                    double right = double.Parse(match.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
+
+                    if (right == 0) throw new DivideByZeroException();
+
+                    result = left % right;
+                }
+                else
+                {
+                    var rawResult = table.Compute(expression, string.Empty);
+
+                    if (rawResult == DBNull.Value || rawResult == null)
+                    {
+                        throw new DivideByZeroException();
+                    }
+
+                    result = Convert.ToDouble(rawResult);
+                }
+
+                if (double.IsInfinity(result) || double.IsNaN(result))
+                {
+                    throw new DivideByZeroException();
+                }
+
                 exp.Result = result;
                 SaveResult(result);
-
                 AddToHistory(expression);
+            }
+            catch (DivideByZeroException)
+            {
+                exp.Error = "Division by zero";
+                exp.IsError = true;
             }
             catch (Exception ex)
             {
@@ -49,7 +75,7 @@ namespace OKR_lr2_1.Controllers
                 exp.IsError = true;
             }
 
-            ViewBag.Result = exp;
+            ViewData["Result"] = exp;
             return View("Index");
         }
 
