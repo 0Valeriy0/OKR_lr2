@@ -27,8 +27,8 @@ namespace OKR_lr2_1.Controllers
         {
             if (string.IsNullOrWhiteSpace(expression))
             {
-                ViewBag.Result = "Вираз не може бути порожнім";
-                return View();
+                ViewData["Result"] = "Вираз не може бути порожнім";
+                return View("Index");
             }
 
             Expression exp = new Expression { ExpressionText = expression };
