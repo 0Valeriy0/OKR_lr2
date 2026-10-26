@@ -8,10 +8,14 @@ namespace OKR_lr2_1.Controllers
 {
     public class HomeController : Controller
     {
+        static double? savedResult;
+        [HttpGet("Index")]
+        [HttpGet("~/")]
         public IActionResult Index()
         {
             return View();
         }
+        [HttpGet("Calculate/{expression}")]
         public IActionResult Calculate(string expression)
         {
             if (string.IsNullOrWhiteSpace(expression))
@@ -25,7 +29,8 @@ namespace OKR_lr2_1.Controllers
                 DataTable table = new DataTable();
                 var result = (double?)table.Compute(expression, string.Empty);
                 if (result == double.PositiveInfinity || result == double.NegativeInfinity || result == null) throw new DivideByZeroException();
-                exp.Result = result; 
+                exp.Result = result;
+                SaveResult(result);
             }
             catch (Exception ex)
             {
@@ -33,7 +38,14 @@ namespace OKR_lr2_1.Controllers
                 exp.IsError = true;
             }
             ViewBag.Result = exp;
-            return View();
+            return View("Index");
+        }
+        public void SaveResult(double? result) => savedResult = result;
+        [HttpGet("GetSavedResult")]
+        public IActionResult GetSavedResult()
+        {
+            ViewBag.Saved = savedResult;
+            return View("Index");
         }
     }
 }
