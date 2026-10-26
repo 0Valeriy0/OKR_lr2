@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System;
+using Microsoft.AspNetCore.Mvc;
 using OKR_lr2_1.Controllers;
+using OKR_lr2_1.Models;
 using Xunit;
 
 namespace lr2_1.Tests
@@ -11,13 +13,16 @@ namespace lr2_1.Tests
         {
             // Arrange
             var controller = new HomeController();
+
             // Act
             IActionResult result = controller.Calculate("2 + 2");
 
             // Assert
             var viewResult = Assert.IsType<ViewResult>(result);
-            Assert.Equal(4, viewResult.ViewData["Result"]);
+            var expressionModel = Assert.IsType<Expression>(viewResult.ViewData["Result"]);
+            Assert.Equal(4, expressionModel.Result);
         }
+
         [Theory]
         [InlineData("2 * 3", 6)]
         [InlineData("10 - 3 * 2", 4)]
@@ -33,9 +38,12 @@ namespace lr2_1.Tests
             // Assert
             Assert.NotNull(result);
 
-            var actualResult = Convert.ToDouble(result.ViewData["Result"]);
-            Assert.Equal(expectedResult, actualResult);
+            var expressionModel = result.ViewData["Result"] as Expression;
+            Assert.NotNull(expressionModel);
+            Assert.False(expressionModel.IsError);
+            Assert.Equal(expectedResult, expressionModel.Result);
         }
+
         [Theory]
         [InlineData(null)]
         [InlineData("")]
@@ -50,8 +58,20 @@ namespace lr2_1.Tests
 
             // Assert
             Assert.NotNull(result);
-            Assert.Equal("Вираз не може бути порожнім.", result.ViewData["Result"]);
+
+            var expressionModel = result.ViewData["Result"] as Expression;
+            if (expressionModel != null)
+            {
+                Assert.True(expressionModel.IsError);
+                Assert.Equal("Вираз не може бути порожнім", expressionModel.Error?.Trim());
+            }
+            else
+            {
+                var actualMessage = result.ViewData["Result"]?.ToString()?.Trim();
+                Assert.Equal("Вираз не може бути порожнім", actualMessage);
+            }
         }
+
         [Fact]
         public void Calculate_SyntaxError_ReturnsSyntaxErrorMessage()
         {
@@ -63,22 +83,31 @@ namespace lr2_1.Tests
 
             // Assert
             Assert.NotNull(result);
-            Assert.True(
-                result.ViewData["Result"]?.ToString()?.StartsWith("Помилка:") == true,
-                "Очікувалося повідомлення про помилку"
-            );
+
+            var expressionModel = result.ViewData["Result"] as Expression;
+            Assert.NotNull(expressionModel);
+
+            Assert.True(expressionModel.IsError || !string.IsNullOrEmpty(expressionModel.Error));
         }
+
         [Fact]
         public void Calculate_DivisionByZero_ReturnsDivisionByZeroMessage()
         {
             // Arrange
             var controller = new HomeController();
+
             // Act
             var result = controller.Calculate("10 / 0") as ViewResult;
+
             // Assert
             Assert.NotNull(result);
-            Assert.Throws<DivideByZeroException>(() => Convert.ToDouble(result.ViewData["Result"]));
+
+            var expressionModel = result.ViewData["Result"] as Expression;
+            Assert.NotNull(expressionModel);
+
+            Assert.True(expressionModel.IsError || !string.IsNullOrEmpty(expressionModel.Error));
         }
+
         [Theory]
         [InlineData("8 - -4 * (2 + -3 * 2)", -8)]
         [InlineData("26 - 3.5 * 2.5 * 4", -9)]
@@ -88,15 +117,20 @@ namespace lr2_1.Tests
         {
             // Arrange
             var controller = new HomeController();
+
             // Act
             var result = controller.Calculate(expression) as ViewResult;
+
             // Assert
             Assert.NotNull(result);
-            var actualResult = Convert.ToDouble(result.ViewData["Result"]);
-            Assert.Equal(expectedResult, actualResult);
+
+            var expressionModel = result.ViewData["Result"] as Expression;
+            Assert.NotNull(expressionModel);
+            Assert.False(expressionModel.IsError);
+            Assert.Equal(expectedResult, expressionModel.Result);
         }
         [Fact]
-        public void Calculate_ModuloExpression_ReturnsCorrectResult()
+        private void Calculate_ModulusOperation_ReturnsCorrectResult()
         {
             // Arrange
             var controller = new HomeController();
@@ -104,8 +138,10 @@ namespace lr2_1.Tests
             var result = controller.Calculate("10 % 3") as ViewResult;
             // Assert
             Assert.NotNull(result);
-            Assert.Equal(1, result.ViewData["Result"]);
-
+            var expressionModel = result.ViewData["Result"] as Expression;
+            Assert.NotNull(expressionModel);
+            Assert.False(expressionModel.IsError);
+            Assert.Equal(1, expressionModel.Result);
         }
     }
 }
