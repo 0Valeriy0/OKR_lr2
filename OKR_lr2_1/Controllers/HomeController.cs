@@ -25,6 +25,15 @@ namespace OKR_lr2_1.Controllers
         [HttpGet("Calculate")]
         public IActionResult Calculate(string expression)
         {
+            //isMemoryRecalled = false;  <--тут має бути це 
+
+            /* це потрібне для того , щоб при кожному новому обчисленні і 2-го виклику R•CM
+            //не скидався стан пам'яті, тобто якщо користувач натисне кнопку "Recall/Clear Memory"
+            після обчислення нового виразу, то не пам'ять буде очищена, а знову вставлена */
+
+            //взагальному зробити логіку що ExpressionText був завжди збережений в ViewBag.Expression,
+            //а не в ViewData["Result"] і при кожному новому обчисленні він оновлювався, а при натисканні
+            //R•CM він вставлявся в поле вводу, а не виводився як результат обчислення
             if (string.IsNullOrWhiteSpace(expression))
             {
                 ViewData["Result"] = "Вираз не може бути порожнім";
@@ -150,7 +159,7 @@ namespace OKR_lr2_1.Controllers
         }
 
         [HttpGet("RecallClearMemory")]
-        public IActionResult RecallClearMemory()
+        public IActionResult RecallClearMemory() // тут мав бути параметр string currentExpression
         {
             if (isMemoryRecalled)
             {
@@ -161,6 +170,7 @@ namespace OKR_lr2_1.Controllers
             else
             {
                 isMemoryRecalled = true;
+                //ViewBag.Expression = (currentExpression ?? "") + memory
                 ViewBag.MemoryValue = memory;
             }
             return View("Index");
