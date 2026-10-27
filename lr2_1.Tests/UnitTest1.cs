@@ -8,6 +8,7 @@ namespace lr2_1.Tests
 {
     public class UnitTest1
     {
+        //тестування математичних операцій
         [Fact]
         public void Calculate_ValidExpression_ReturnsViewWithResult()
         {
@@ -142,6 +143,125 @@ namespace lr2_1.Tests
             Assert.NotNull(expressionModel);
             Assert.False(expressionModel.IsError);
             Assert.Equal(1, expressionModel.Result);
+        }
+        //тестування памяті
+        private HomeController CreateController()
+        {
+            var controller = new HomeController();
+            controller.ControllerContext = new ControllerContext();
+            return controller;
+        }
+        [Fact]
+        public void MemoryPlus_AddsValueToMemory_AndRecallReturnsCorrectValue()
+        {
+            // Arrange
+            var controller = CreateController();
+            controller.ClearAll();
+
+            // Act
+            controller.MemoryPlus(15.5);
+            controller.MemoryPlus(4.5);
+
+            var result = controller.RecallClearMemory() as ViewResult;
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(20.0, result.ViewData["MemoryValue"]);
+        }
+        [Fact]
+        public void RecallClearMemory_FirstCallRecalls_SecondCallClearsMemory()
+        {
+            // Arrange
+            var controller = CreateController();
+            controller.ClearAll();
+            controller.MemoryPlus(50);
+
+            // Act 1
+            var firstCallResult = controller.RecallClearMemory() as ViewResult;
+
+            // Act 2
+            var secondCallResult = controller.RecallClearMemory() as ViewResult;
+
+            // Assert 1
+            Assert.Equal(50.0, firstCallResult?.ViewData["MemoryValue"]);
+            Assert.Equal("Cleared", secondCallResult?.ViewData["MemoryState"]);
+
+            // Act 3
+            var thirdCallResult = controller.RecallClearMemory() as ViewResult;
+
+            // Assert 2
+            Assert.Equal(0.0, thirdCallResult?.ViewData["MemoryValue"]);
+        }
+        [Fact]
+        public void MemoryOperations_PlusAndMinus_CalculatesCorrectly()
+        {
+            // Arrange
+            var controller = CreateController();
+            controller.ClearAll();
+
+            // Act
+            controller.MemoryPlus(100);
+            controller.MemoryMinus(30);
+
+            var result = controller.RecallClearMemory() as ViewResult;
+
+            // Assert
+            Assert.Equal(70.0, result?.ViewData["MemoryValue"]);
+        }
+        [Fact]
+        public void MemoryRecallClear_PressAfterOtherOperations_ShouldRecallNotClear()
+        {
+            // Arrange
+            var controller = CreateController();
+            controller.ClearAll();
+
+            double memoryValue = 100;
+            controller.MemoryPlus(memoryValue);
+
+            // Act 1
+            controller.RecallClearMemory();
+
+            // Act 2
+            controller.Calculate("5 * 5");
+
+            // Act 3
+            var result = controller.RecallClearMemory() as ViewResult;
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(memoryValue, result.ViewData["MemoryValue"]);
+            Assert.NotEqual("Cleared", result.ViewData["MemoryState"]);
+        }
+        [Fact]
+        public void RecallClearMemory_PressAfterOtherOperations_ShouldKeepMemoryAndAppendToExpression()
+        {
+            // Arrange
+            var controller = CreateController();
+            controller.ClearAll();
+
+            // 1. Додаємо 9 у пам'ять (M+)
+            controller.MemoryPlus(9);
+
+            // 2. Викликаємо пам'ять уперше (R•CM) — у вираз вставляється "9"
+            var view1 = controller.RecallClearMemory() as ViewResult;
+            var expr1 = view1?.ViewData["Result"] as Expression;
+            // Очікуємо: expr1.ExpressionText == "9"
+
+            // 3. Користувач вводить операцію додавання "+ 5" і обчислює (або продовжує ввід)
+            controller.Calculate("9 + 5");
+
+            // 4. Користувач готує наступну операцію, наприклад вводить "+"
+            // і тисне R•CM ще раз (очікуючи підставку збереженої 9 з пам'яті: "9 + 5 + 9")
+            var view2 = controller.RecallClearMemory() as ViewResult;
+            var expr2 = view2?.ViewData["Result"] as Expression;
+
+            // Assert: Перевіряємо, що після проміжного Calculate пам'ять не очистилася(як це робиться у поточному dev)
+            Assert.NotNull(expr2);
+
+            // Перевіряємо, що ExpressionText містить збережене число з пам'яті (9),
+            // а не порожній рядок чи "0" через передчасне очищення (Cleared)
+            Assert.Contains("9", expr2.ExpressionText);
+            Assert.False(expr2.IsError);
         }
     }
 }
