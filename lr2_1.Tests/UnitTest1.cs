@@ -130,19 +130,34 @@ namespace lr2_1.Tests
             Assert.False(expressionModel.IsError);
             Assert.Equal(expectedResult, expressionModel.Result);
         }
-        [Fact]
-        private void Calculate_ModulusOperation_ReturnsCorrectResult()
+        [Theory]
+        [InlineData("2*3%5", 1.0)]
+        [InlineData("10*4%6", 4.0)]
+
+        [InlineData("9%2*5", 5.0)]
+        [InlineData("15%4*3", 9.0)]
+
+        [InlineData("12/2%5", 1.0)]
+        [InlineData("100/4%7", 4.0)]
+
+        [InlineData("17%5/2", 1.0)]
+        [InlineData("23%7/2", 1.0)]
+
+        [InlineData("2*9%5/2", 1.5)]
+        [InlineData("50/2%8*3", 3.0)]
+        public void Calculate_ComplexPercentageOperations_ReturnsCorrectResult(string expression, double expectedResult)
         {
             // Arrange
             var controller = new HomeController();
+
             // Act
-            var result = controller.Calculate("10 % 3") as ViewResult;
+            var actionResult = controller.Calculate(expression) as ViewResult;
+            var expModel = actionResult?.ViewData["Result"] as OKR_lr2_1.Models.Expression;
+
             // Assert
-            Assert.NotNull(result);
-            var expressionModel = result.ViewData["Result"] as Expression;
-            Assert.NotNull(expressionModel);
-            Assert.False(expressionModel.IsError);
-            Assert.Equal(1, expressionModel.Result);
+            Assert.NotNull(expModel);
+            Assert.False(expModel.IsError, $"Вираз '{expression}' повернув помилку: {expModel.Error}");
+            Assert.Equal(expectedResult, expModel.Result);
         }
         //тестування памяті
         private HomeController CreateController()
