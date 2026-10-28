@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using OKR_lr2_1.Models;
 using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace OKR_lr2_1.Controllers
@@ -30,30 +31,7 @@ namespace OKR_lr2_1.Controllers
 
             try
             {
-                DataTable table = new DataTable();
-                double result;
-                var match = Regex.Match(expression.Trim(), @"^(-?\d+(?:\.\d+)?)\s*%\s*(-?\d+(?:\.\d+)?)$");
-
-                if (match.Success)
-                {
-                    double left = double.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
-                    double right = double.Parse(match.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
-
-                    if (right == 0) throw new DivideByZeroException();
-
-                    result = left % right;
-                }
-                else
-                {
-                    var rawResult = table.Compute(expression, string.Empty);
-
-                    if (rawResult == DBNull.Value || rawResult == null)
-                    {
-                        throw new DivideByZeroException();
-                    }
-
-                    result = Convert.ToDouble(rawResult);
-                }
+                double result = Evaluate(expression);
 
                 if (double.IsInfinity(result) || double.IsNaN(result))
                 {
@@ -77,6 +55,96 @@ namespace OKR_lr2_1.Controllers
 
             ViewData["Result"] = exp;
             return View("Index");
+        }
+
+        private static double Evaluate(string? expression)
+        {
+            if (string.IsNullOrWhiteSpace(expression)) return 0;
+
+            int pos = 0;
+            string s = expression.Replace(" ", "").Replace(',', '.');
+
+            double ParseExpression()
+            {
+                double val = ParseTerm();
+                while (pos < s.Length)
+                {
+                    char op = s[pos];
+                    if (op == '+' || op == '-')
+                    {
+                        pos++;
+                        double next = ParseTerm();
+                        val = op == '+' ? val + next : val - next;
+                    }
+                    else break;
+                }
+                return val;
+            }
+
+            double ParseTerm()
+            {
+                double val = ParseFactor();
+                while (pos < s.Length)
+                {
+                    char op = s[pos];
+                    if (op == '*' || op == '/' || op == '%')
+                    {
+                        pos++;
+                        double next = ParseFactor();
+                        if (op == '*')
+                        {
+                            val *= next;
+                        }
+                        else if (op == '/')
+                        {
+                            if (next == 0) throw new DivideByZeroException();
+                            val /= next;
+                        }
+                        else
+                        {
+                            if (next == 0) throw new DivideByZeroException();
+                            val %= next;
+                        }
+                    }
+                    else break;
+                }
+                return val;
+            }
+
+            double ParseFactor()
+            {
+                if (pos < s.Length && s[pos] == '+') { pos++; return ParseFactor(); }
+                if (pos < s.Length && s[pos] == '-') { pos++; return -ParseFactor(); }
+
+                if (pos < s.Length && s[pos] == '(')
+                {
+                    pos++;
+                    double val = ParseExpression();
+                    if (pos < s.Length && s[pos] == ')')
+                    {
+                        pos++;
+                    }
+                    else
+                    {
+                        throw new FormatException("Missing closing parenthesis");
+                    }
+                    return val;
+                }
+
+                int start = pos;
+                while (pos < s.Length && (char.IsDigit(s[pos]) || s[pos] == '.'))
+                {
+                    pos++;
+                }
+
+                if (start == pos) throw new FormatException("Invalid expression");
+
+                return double.Parse(s.Substring(start, pos - start), CultureInfo.InvariantCulture);
+            }
+
+            double res = ParseExpression();
+            if (pos < s.Length) throw new FormatException("Unexpected character: " + s[pos]);
+            return res;
         }
 
         public void SaveResult(double? result) => savedResult = result;
