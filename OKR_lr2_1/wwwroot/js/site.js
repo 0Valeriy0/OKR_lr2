@@ -5,7 +5,7 @@
     if (!display || !keypad) return;
 
     let currentExpression = '0';
-    const operators = ['+', '-', '*', '/'];
+    const operators = ['+', '-', '*', '/', '%'];
 
     function updateDisplay() {
         display.innerText = currentExpression;
@@ -44,9 +44,8 @@
             return;
         }
 
-        // 3. Знак "=" НЕ додається на екран (зарезервовано під відправку на бекенд)
+        // 3. Знак "=" (ігноруємо для виводу)
         if (val === '=') {
-            // Тут буде відправка на бекенд контролера
             return;
         }
 
@@ -55,42 +54,63 @@
             return;
         }
 
-        // Отримуємо останній символ, який зараз є на екрані
         const lastChar = currentExpression.slice(-1);
 
-        // 5. Захист від двох знаків операцій поспіль (++, --, //, +- тощо)
+        // 5. Захист від подвійних операторів підряд (включаючи %)
         if (operators.includes(val)) {
+            // Виняток: якщо це мінус як перший символ або після дужки (від'ємне число)
+            if (val === '-' && (currentExpression === '0' || lastChar === '(')) {
+                if (currentExpression === '0') {
+                    currentExpression = '-';
+                } else {
+                    currentExpression += '-';
+                }
+                updateDisplay();
+                return;
+            }
+
+            // Якщо попередній символ теж оператор — замінюємо його на новий
             if (operators.includes(lastChar)) {
-                // Замінюємо останній введений знак на щойно натиснутий
                 currentExpression = currentExpression.slice(0, -1) + val;
                 updateDisplay();
                 return;
             }
-        }
+        } // <- Тут дужка була пропущена!
 
-        // 6. Захист від кількох крапок підряд
+        // 6. Валідація крапки: перевіряємо, чи є крапка в ПОТОЧНОМУ числі
         if (val === '.') {
-            if (lastChar === '.') return;
-            // Якщо натиснули крапку одразу після операції (+, -, *, /) — додаємо "0."
-            if (operators.includes(lastChar)) {
-                currentExpression += '0.';
+            const tokens = currentExpression.split(/[\+\-\*\/\%\(\)]/);
+            const currentNumber = tokens[tokens.length - 1];
+
+            // Якщо в поточному числі ВЖЕ Є крапка — ігноруємо ввід
+            if (currentNumber.includes('.')) {
+                return;
+            }
+
+            // Якщо крапку тиснуть одразу після операції або дужки — додаємо "0."
+            if (operators.includes(lastChar) || lastChar === '(' || currentExpression === '0') {
+                if (currentExpression === '0') {
+                    currentExpression = '0.';
+                } else {
+                    currentExpression += '0.';
+                }
                 updateDisplay();
                 return;
             }
         }
 
-        // 7. Введення цифр, дужок та перших операцій
+        // 7. Обробка початкового стану "0"
         if (currentExpression === '0') {
             if (val === '.') {
                 currentExpression = '0.';
             } else if (operators.includes(val)) {
-                currentExpression += val; // наприклад, дозволяємо "0+"
+                currentExpression += val; // "0+"
             } else {
-                currentExpression = val; // замінюємо нуль на першу цифру чи дужку
+                currentExpression = val; // заміна "0" на цифру чи дужку
             }
         } else {
             currentExpression += val;
-        }
+        } // <- Тут дужка була пропущена!
 
         updateDisplay();
     }
