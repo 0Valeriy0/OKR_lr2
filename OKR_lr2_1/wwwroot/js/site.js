@@ -1,20 +1,35 @@
 ﻿document.addEventListener('DOMContentLoaded', () => {
     const display = document.getElementById('display');
     const keypad = document.querySelector('.keypad-grid');
+    const hiddenExpression = document.getElementById('hiddenExpression');
+    const serverResult = document.getElementById('serverResult');
 
     if (!display || !keypad) return;
 
-    let currentExpression = '0';
     const operators = ['+', '-', '*', '/', '%'];
+    let currentExpression = serverResult && serverResult.value ? serverResult.value : '0';
 
     function updateDisplay() {
         display.innerText = currentExpression;
+
+        // Оновлюємо поле для стандартного обчислення (=)
+        if (hiddenExpression) {
+            hiddenExpression.value = currentExpression;
+        }
+
+        // Оновлюємо поля для M+ та M-, намагаючись перетворити поточний вираз на число
+        document.querySelectorAll('.hidden-value').forEach(input => {
+            try {
+                // Якщо на екрані "2+2", воно порахує 4, щоб відправити в контролер (double value)
+                input.value = eval(currentExpression) || 0;
+            } catch (e) {
+                input.value = 0;
+            }
+        });
     }
 
-    // Встановлюємо 0 при завантаженні
     updateDisplay();
 
-    // Слухаємо кліки по кнопках
     keypad.addEventListener('click', (event) => {
         const btn = event.target.closest('button');
         if (!btn) return;
@@ -22,20 +37,23 @@
         const val = btn.dataset.val;
         if (!val) return;
 
+        // Забороняємо стандартну дію лише для кнопок, які НЕ відправляють форму на сервер
+        if (btn.type !== 'submit') {
+            event.preventDefault();
+        }
+
         handleInput(val);
     });
 
     function handleInput(val) {
-        // 1. Очищення екрана (CE або CA)
-        if (val === 'CE' || val === 'CA') {
+        if (val === 'CE') {
             currentExpression = '0';
             updateDisplay();
             return;
         }
 
-        // 2. Стерти один символ назад (стрілка →)
         if (val === 'backspace') {
-            if (currentExpression.length > 1) {
+            if (currentExpression.length > 1 && currentExpression !== 'Помилка') {
                 currentExpression = currentExpression.slice(0, -1);
             } else {
                 currentExpression = '0';
@@ -44,19 +62,19 @@
             return;
         }
 
-        // 3. Знак "=" (ігноруємо для виводу)
-        if (val === '=') {
+        // Якщо це кнопка форми (=, M+, M-, R-CM, CA), браузер сам відправить запит на сервер
+        if (['=', 'M+', 'M-', 'R-CM', 'CA'].includes(val)) {
             return;
         }
 
-        // 4. Ігноруємо службові кнопки Sharp
-        if (['prev', 'next', 'auto-replay', 'correct', 'tax-plus', 'tax-minus', 'rate', 'R-CM', 'M-', 'M+'].includes(val)) {
+        // Ігноруємо решту ще не реалізованих кнопок Sharp
+        if (['prev', 'next', 'auto-replay', 'correct', 'tax-plus', 'tax-minus', 'rate'].includes(val)) {
             return;
         }
 
         const lastChar = currentExpression.slice(-1);
 
-        // 5. Захист від подвійних операторів підряд (включаючи %)
+        // Захист від подвійних операторів підряд (включаючи %)
         if (operators.includes(val)) {
             // Виняток: якщо це мінус як перший символ або після дужки (від'ємне число)
             if (val === '-' && (currentExpression === '0' || lastChar === '(')) {
@@ -75,9 +93,9 @@
                 updateDisplay();
                 return;
             }
-        } // <- Тут дужка була пропущена!
+        }
 
-        // 6. Валідація крапки: перевіряємо, чи є крапка в ПОТОЧНОМУ числі
+        // Валідація крапки: перевіряємо, чи є крапка в ПОТОЧНОМУ числі
         if (val === '.') {
             const tokens = currentExpression.split(/[\+\-\*\/\%\(\)]/);
             const currentNumber = tokens[tokens.length - 1];
@@ -99,18 +117,18 @@
             }
         }
 
-        // 7. Обробка початкового стану "0"
-        if (currentExpression === '0') {
+        // Обробка початкового стану "0" або "Помилка"
+        if (currentExpression === '0' || currentExpression === 'Помилка') {
             if (val === '.') {
                 currentExpression = '0.';
             } else if (operators.includes(val)) {
-                currentExpression += val; // "0+"
+                currentExpression += val;
             } else {
-                currentExpression = val; // заміна "0" на цифру чи дужку
+                currentExpression = val;
             }
         } else {
             currentExpression += val;
-        } // <- Тут дужка була пропущена!
+        }
 
         updateDisplay();
     }
