@@ -1,31 +1,200 @@
-html {
-  font-size: 14px;
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
 }
 
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
-}
-
+/* Прибираємо flex з body, щоб не ламалася навігація _Layout.cshtml */
 body {
-  margin-bottom: 60px;
+    background-color: #2b2e34;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #fff;
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+/* КОРПУС КАЛЬКУЛЯТОРА (ширину збільшено до 480px, відцентровано через margin) */
+.calculator-case {
+    width: 480px;
+    margin: 30px auto;
+    background-color: #e5e4de;
+    border-radius: 20px;
+    border: 4px solid #bcbbb3;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.45), inset 0 1px 3px rgba(255, 255, 255, 0.8);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+/* ВЕРХНЯ ТЕМНА ПАНЕЛЬ ДИСПЛЕЮ */
+.display-panel {
+    background: linear-gradient(180deg, #3d312c 0%, #2f2521 100%);
+    padding: 18px 24px 14px;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.brand {
+    color: #f0ede6;
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 2px;
+}
+
+/* СОНЯЧНА ПАНЕЛЬ */
+.solar-cell {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    background-color: #150908;
+    border: 1px solid #140706;
+    border-radius: 3px;
+}
+
+    .solar-cell span {
+        width: 18px;
+        height: 20px;
+        background: linear-gradient(180deg, #441c1a 0%, #220b0a 100%);
+        border-radius: 1px;
+    }
+
+/* LCD-ЕКРАН */
+.lcd-screen {
+    background-color: #d8ded2;
+    border: 3px solid #1a1412;
+    border-radius: 6px;
+    box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.4), inset -2px -2px 5px rgba(255, 255, 255, 0.2);
+    padding: 8px 14px;
+    font-family: 'Share Tech Mono', monospace;
+    color: #1a201c;
+}
+
+.lcd-indicators {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    height: 16px;
+    line-height: 16px;
+    letter-spacing: 1px;
+}
+
+.lcd-digits {
+    font-size: 42px;
+    text-align: right;
+    letter-spacing: 2px;
+    line-height: 1.1;
+    font-weight: bold;
+    overflow: hidden;
+}
+
+.model-name {
+    color: #d1cbc2;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: right;
+    letter-spacing: 0.8px;
+    margin-top: 8px;
+}
+
+/* КЛАВІАТУРНА ПАНЕЛЬ */
+.keypad-body {
+    padding: 18px 20px 24px;
+    background-color: #ebeae4;
+}
+
+/* СІТКА НА 5 КОЛОНОК: minmax(0, 1fr) гарантує, що колонки не вилізуть за край */
+.keypad-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-auto-rows: 56px;
+    gap: 10px;
+}
+
+.empty-cell {
+    visibility: hidden;
+}
+
+/* 3D-КНОПКИ */
+.btn {
+    border: 1px solid #bebcb3;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    outline: none;
+    min-width: 0;
+    transition: transform 0.05s ease, box-shadow 0.05s ease;
+}
+
+    .btn:active {
+        transform: translateY(2px);
+        box-shadow: 0 1px 0 rgba(0,0,0,0.3) !important;
+    }
+
+/* СВІТЛІ КНОПКИ */
+.btn-light {
+    background: linear-gradient(180deg, #ffffff 0%, #ebe8df 100%);
+    color: #262523;
+    box-shadow: 0 4px 0 #b3b1a8, 0 5px 4px rgba(0,0,0,0.15);
+}
+
+/* ТЕМНІ КНОПКИ (ЦИФРИ) */
+.btn-dark {
+    background: linear-gradient(180deg, #6c6b65 0%, #52514c 100%);
+    color: #ffffff;
+    border-color: #44433f;
+    box-shadow: 0 4px 0 #3a3936, 0 5px 4px rgba(0,0,0,0.25);
+    font-size: 22px;
+}
+
+/* ЧЕРВОНА КНОПКА "C•CE" */
+.btn-red {
+    background: linear-gradient(180deg, #e36a64 0%, #c44f49 100%);
+    color: #ffffff;
+    border-color: #a83d38;
+    box-shadow: 0 4px 0 #8f3430, 0 5px 4px rgba(0,0,0,0.25);
+}
+
+/* КОЛЬОРИ НАПИСІВ */
+.text-green {
+    color: #15803d !important;
+    font-size: 11px !important;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.1;
+}
+
+.text-orange {
+    color: #b45309 !important;
+    font-weight: 700;
+}
+
+/* ВЕЛИКА КНОПКА ПЛЮС (+) */
+.btn-tall-plus {
+    grid-row: span 2;
+    height: 100%;
+    font-size: 28px;
+}
+
+/* ПІДПИСИ НА КНОПКАХ */
+.labeled-btn {
+    line-height: 1;
+}
+
+.sub-label {
+    font-size: 7.5px;
+    font-weight: 700;
+    color: #55534e;
+    margin-bottom: 3px;
 }
