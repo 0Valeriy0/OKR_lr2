@@ -1,23 +1,40 @@
-﻿@{
+@{
     ViewData["Title"] = "Калькулятор";
 
     var initialDisplay = "0";
-    if (ViewBag.Result != null)
+    if (ViewBag.CurrentExpression != null)
     {
-        if (ViewBag.Result is string)
+        initialDisplay = ViewBag.CurrentExpression.ToString();
+    }
+    else if (ViewBag.ErrorMessage != null)
+    {
+        initialDisplay = ViewBag.ErrorMessage.ToString();
+    }
+    else if (ViewBag.Result != null)
+    {
+        if (ViewBag.Result is string str)
         {
-            initialDisplay = "0";
+            initialDisplay = str;
         }
-        else
+        else if (ViewBag.Result is OKR_lr2_1.Models.Expression exp)
         {
-            initialDisplay = ViewBag.Result.IsError ? "Помилка" : ViewBag.Result.Result.ToString();
+            if (exp.IsError)
+            {
+                initialDisplay = exp.Error ?? "Помилка";
+            }
+            else if (exp.Result.HasValue)
+            {
+                initialDisplay = exp.Result.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+            else
+            {
+                initialDisplay = exp.ExpressionText ?? "0";
+            }
         }
     }
-
-    // Якщо було викликано пам'ять, показуємо її
-    if (ViewBag.MemoryValue != null)
+    else if (ViewBag.MemoryValue != null)
     {
-        initialDisplay = ViewBag.MemoryValue.ToString();
+        initialDisplay = ((double)ViewBag.MemoryValue).ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 }
 <!DOCTYPE html>
@@ -44,7 +61,7 @@
             <div class="lcd-screen">
                 <div class="lcd-indicators">
                     <span class="ind-step">01</span>
-                    <span class="ind-icon" style="opacity: @(ViewBag.MemoryValue != null || ViewBag.MemoryState == "Cleared" ? "1" : "0.1")">M</span>
+                    <span class="ind-icon" style="opacity: @(ViewBag.HasMemory == true || (ViewBag.MemoryValue != null && (double)ViewBag.MemoryValue != 0) ? "1" : "0.1")">M</span>
                     <span class="ind-icon">+TAX</span>
                 </div>
                 <div class="lcd-digits" id="display">0.0</div>
@@ -78,15 +95,18 @@
 
                 <!-- РЯДОК 3 -->
                 <form asp-controller="Home" asp-action="RecallClearMemory" method="get" style="display: contents;">
+                    <input type="hidden" name="currentExpression" class="hidden-expression-input" />
                     <button type="submit" class="btn btn-light" data-val="R-CM">R•CM</button>
                 </form>
 
                 <form asp-controller="Home" asp-action="MemoryMinus" method="post" style="display: contents;">
+                    <input type="hidden" name="expression" class="hidden-expression-input" />
                     <input type="hidden" name="value" class="hidden-value" />
                     <button type="submit" class="btn btn-light" data-val="M-">M−</button>
                 </form>
 
                 <form asp-controller="Home" asp-action="MemoryPlus" method="post" style="display: contents;">
+                    <input type="hidden" name="expression" class="hidden-expression-input" />
                     <input type="hidden" name="value" class="hidden-value" />
                     <button type="submit" class="btn btn-light" data-val="M+">M+</button>
                 </form>
