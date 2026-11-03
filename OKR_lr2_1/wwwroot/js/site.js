@@ -1,15 +1,31 @@
-﻿document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
     const display = document.getElementById('display');
     const keypad = document.querySelector('.keypad-grid');
+    const hiddenExpression = document.getElementById('hiddenExpression');
+    const serverResult = document.getElementById('serverResult');
 
     if (!display || !keypad) return;
 
-    let currentExpression = '0';
-    // 1. Додано відсоток '%' до списку операторів
     const operators = ['+', '-', '*', '/', '%'];
+    let currentExpression = serverResult && serverResult.value ? serverResult.value : '0';
 
     function updateDisplay() {
         display.innerText = currentExpression;
+
+        // Оновлюємо поле для стандартного обчислення (=)
+        if (hiddenExpression) {
+            hiddenExpression.value = currentExpression;
+        }
+
+        // Оновлюємо поля для M+ та M-, намагаючись перетворити поточний вираз на число
+        document.querySelectorAll('.hidden-value').forEach(input => {
+            try {
+                // Якщо на екрані "2+2", воно порахує 4, щоб відправити в контролер (double value)
+                input.value = eval(currentExpression) || 0;
+            } catch (e) {
+                input.value = 0;
+            }
+        });
     }
 
     updateDisplay();
@@ -21,20 +37,23 @@
         const val = btn.dataset.val;
         if (!val) return;
 
+        // Забороняємо стандартну дію лише для кнопок, які НЕ відправляють форму на сервер
+        if (btn.type !== 'submit') {
+            event.preventDefault();
+        }
+
         handleInput(val);
     });
 
     function handleInput(val) {
-        // 1. Очищення екрана (CE або CA)
-        if (val === 'CE' || val === 'CA') {
+        if (val === 'CE') {
             currentExpression = '0';
             updateDisplay();
             return;
         }
 
-        // 2. Стерти один символ назад
         if (val === 'backspace') {
-            if (currentExpression.length > 1) {
+            if (currentExpression.length > 1 && currentExpression !== 'Помилка') {
                 currentExpression = currentExpression.slice(0, -1);
             } else {
                 currentExpression = '0';
@@ -43,19 +62,24 @@
             return;
         }
 
-        // 3. Знак "=" (дозволяємо стандартну відправку форми на бекенд)
-        if (val === '=') {
+        // Якщо це кнопка форми (=, M+, M-, R-CM, CA), браузер сам відправить запит на сервер
+        if (['=', 'M+', 'M-', 'R-CM', 'CA'].includes(val)) {
             return;
         }
 
-        // 4. Ігноруємо службові кнопки Sharp
-        if (['prev', 'next', 'auto-replay', 'correct', 'tax-plus', 'tax-minus', 'rate', 'R-CM', 'M-', 'M+'].includes(val)) {
+        // Ігноруємо решту ще не реалізованих кнопок Sharp
+        if (['prev', 'next', 'auto-replay', 'correct', 'tax-plus', 'tax-minus', 'rate'].includes(val)) {
+            return;
+        }
+
+        // Обмеження: вводити можна лише якщо кількість символів менше 16
+        if (currentExpression.length >= 16) {
             return;
         }
 
         const lastChar = currentExpression.slice(-1);
 
-        // 5. Захист від подвійних операторів підряд (включаючи %)
+        // Захист від подвійних операторів підряд (включаючи %)
         if (operators.includes(val)) {
             // Виняток: якщо це мінус як перший символ або після дужки (від'ємне число)
             if (val === '-' && (currentExpression === '0' || lastChar === '(')) {
@@ -68,44 +92,42 @@
                 return;
             }
 
-            // Якщо попередній символ теж оператор — замінюємо його
+            // Якщо попередній символ теж оператор — замінюємо його на новий
             if (operators.includes(lastChar)) {
-                // Якщо на початку було "- ", не міняємо його на "*" чи "/"
-                if (currentExpression === '-' && val !== '-') return;
-
                 currentExpression = currentExpression.slice(0, -1) + val;
                 updateDisplay();
                 return;
             }
         }
 
-        // 6. Валідація крапки: перевіряємо, чи є крапка в ПОТОЧНОМУ числі
+        // Валідація крапки: перевіряємо, чи є крапка в ПОТОЧНОМУ числі
         if (val === '.') {
-            // Розбиваємо вираз за операторами та дужками, щоб витягнути остання введене число
             const tokens = currentExpression.split(/[\+\-\*\/\%\(\)]/);
             const currentNumber = tokens[tokens.length - 1];
 
-            // Якщо в поточному числі ВЖЕ Є крапка — ігноруємо ввід (захист від 3.4.5)
-            if (currentNumber.includes('.')) {
+            // Якщо в поточному числі ВЖЕ Є крапка — ігноруємо ввід
+            if (currentNumber.includes('.') || currentNumber.includes(',')) { //тут також потрібно враховувати кому
                 return;
             }
 
-            // Якщо крапку тиснуть одразу після операції — додаємо "0."
-            if (operators.includes(lastChar)) {
-                currentExpression += '0.';
+            // Якщо крапку тиснуть одразу після операції або дужки — додаємо "0."
+            if (operators.includes(lastChar) || lastChar === '(' || currentExpression === '0') {
+                if (currentExpression === '0') {
+                    currentExpression = '0.';
+                } else {
+                    currentExpression += '0.';
+                }
                 updateDisplay();
                 return;
             }
         }
 
-        // 7. Обробка початкового стану "0" або унарного мінуса "-"
-        if (currentExpression === '0') {
+        // Обробка початкового стану "0" або "Помилка"
+        if (currentExpression === '0' || currentExpression === 'Помилка') {
             if (val === '.') {
                 currentExpression = '0.';
-            } else if (val === '-') {
-                currentExpression = '-'; // Від'ємне число на початку
             } else if (operators.includes(val)) {
-                currentExpression += val; // "0+"
+                currentExpression += val;
             } else {
                 currentExpression = val;
             }

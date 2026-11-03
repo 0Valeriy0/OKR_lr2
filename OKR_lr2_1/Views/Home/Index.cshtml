@@ -1,5 +1,24 @@
 ﻿@{
     ViewData["Title"] = "Калькулятор";
+
+    var initialDisplay = "0";
+    if (ViewBag.Result != null)
+    {
+        if (ViewBag.Result is string)
+        {
+            initialDisplay = "0";
+        }
+        else
+        {
+            initialDisplay = ViewBag.Result.IsError ? "Помилка" : ViewBag.Result.Result.ToString();
+        }
+    }
+
+    // Якщо було викликано пам'ять, показуємо її
+    if (ViewBag.MemoryValue != null)
+    {
+        initialDisplay = ViewBag.MemoryValue.ToString();
+    }
 }
 <!DOCTYPE html>
 <html lang="uk">
@@ -11,23 +30,21 @@
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <input type="hidden" id="serverResult" value="@initialDisplay" />
 
     <div class="calculator-case">
-        <!-- ВЕРХНЯ ПАНЕЛЬ: ЛОГОТИП + СОНЯЧНА БАТАРЕЯ + ДИСПЛЕЙ -->
         <header class="display-panel">
             <div class="panel-header">
                 <span class="brand">SHARP</span>
-                <!-- Сонячна батарея праворуч як у EL-128C -->
                 <div class="solar-cell">
                     <span></span><span></span><span></span><span></span>
                 </div>
             </div>
 
-            <!-- LCD екран -->
             <div class="lcd-screen">
                 <div class="lcd-indicators">
                     <span class="ind-step">01</span>
-                    <span class="ind-icon">M</span>
+                    <span class="ind-icon" style="opacity: @(ViewBag.MemoryValue != null || ViewBag.MemoryState == "Cleared" ? "1" : "0.1")">M</span>
                     <span class="ind-icon">+TAX</span>
                 </div>
                 <div class="lcd-digits" id="display">0.0</div>
@@ -36,14 +53,11 @@
             <div class="model-name">ELSI MATE EL-128C</div>
         </header>
 
-        <!-- КЛАВІАТУРНА ПАНЕЛЬ: 5 КОЛОНОК -->
         <main class="keypad-body">
             <div class="keypad-grid">
-
                 <!-- РЯДОК 1 -->
                 <button class="btn btn-light" data-val="prev">PREV ▲</button>
                 <button class="btn btn-light text-green" data-val="auto-replay">AUTO<br>REPLAY</button>
-                <!-- Додані дужки ( та ) у вільні слоти першого рядка -->
                 <button class="btn btn-light" data-val="(">(</button>
                 <button class="btn btn-light" data-val=")">)</button>
                 <div class="empty-cell"></div>
@@ -57,12 +71,26 @@
                 <button class="btn btn-light text-orange labeled-btn" data-val="tax-minus">
                     <span class="sub-label">RATE RECALL</span>−TAX
                 </button>
-                <button class="btn btn-light" data-val="CA">CA</button>
 
-				<!-- РЯДОК 3 -->
-                <button class="btn btn-light" data-val="R-CM">R•CM</button>
-                <button class="btn btn-light" data-val="M-">M−</button>
-                <button class="btn btn-light" data-val="M+">M+</button>
+                <form asp-controller="Home" asp-action="ClearAll" method="post" style="display: contents;">
+                    <button type="submit" class="btn btn-light" data-val="CA">CA</button>
+                </form>
+
+                <!-- РЯДОК 3 -->
+                <form asp-controller="Home" asp-action="RecallClearMemory" method="get" style="display: contents;">
+                    <button type="submit" class="btn btn-light" data-val="R-CM">R•CM</button>
+                </form>
+
+                <form asp-controller="Home" asp-action="MemoryMinus" method="post" style="display: contents;">
+                    <input type="hidden" name="value" class="hidden-value" />
+                    <button type="submit" class="btn btn-light" data-val="M-">M−</button>
+                </form>
+
+                <form asp-controller="Home" asp-action="MemoryPlus" method="post" style="display: contents;">
+                    <input type="hidden" name="value" class="hidden-value" />
+                    <button type="submit" class="btn btn-light" data-val="M+">M+</button>
+                </form>
+
                 <button class="btn btn-light" data-val="rate">RATE</button>
                 <button class="btn btn-red labeled-btn" data-val="CE">
                     <span class="sub-label">ON</span>CE
@@ -86,7 +114,6 @@
                 <button class="btn btn-dark" data-val="1">1</button>
                 <button class="btn btn-dark" data-val="2">2</button>
                 <button class="btn btn-dark" data-val="3">3</button>
-                <!-- Велика кнопка + займає 2 рядки у 4-й колонці -->
                 <button class="btn btn-light btn-tall-plus" data-val="+">+</button>
                 <button class="btn btn-light" data-val="-">−</button>
 
@@ -94,9 +121,12 @@
                 <button class="btn btn-dark" data-val="0">0</button>
                 <button class="btn btn-dark" data-val="00">00</button>
                 <button class="btn btn-dark" data-val=".">.</button>
-                <!-- Сюди заходить нижня частина кнопки + -->
-                <button class="btn btn-light" data-val="=">=</button>
 
+                <!-- Форма обчислення = -->
+                <form asp-controller="Home" asp-action="Calculate" method="get" id="calcForm" style="display: contents;">
+                    <input type="hidden" name="expression" id="hiddenExpression" />
+                    <button type="submit" class="btn btn-light" data-val="=">=</button>
+                </form>
             </div>
         </main>
     </div>
