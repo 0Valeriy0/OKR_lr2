@@ -10,6 +10,11 @@ namespace OKR_lr2_1.Controllers
 {
     public class HomeController : Controller
     {
+        readonly IHostApplicationLifetime _hostApplicationLifetime;
+        public HomeController(IHostApplicationLifetime hostApplicationLifetime)
+        {
+            _hostApplicationLifetime = hostApplicationLifetime;
+        }
         static double? savedResult;
         static double memory = 0;
         static bool isMemoryRecalled = false;
@@ -395,7 +400,8 @@ namespace OKR_lr2_1.Controllers
         [HttpGet("Close")]
         public IActionResult Close()
         {
-            return RedirectToAction("Leave");
+            _hostApplicationLifetime.StopApplication();
+            return View("Index");
         }
     }
 }
