@@ -77,10 +77,12 @@
                 <button class="btn btn-light text-green" data-val="auto-replay">AUTO<br>REPLAY</button>
                 <button class="btn btn-light" data-val="(">(</button>
                 <button class="btn btn-light" data-val=")">)</button>
-                <button class="btn btn-red labeled-btn" data-val="Cl">
-                    <span class="sub-label">ON</span>CE
-                </button>
-
+                <form asp-controller="Home" asp-action="Close" method="get" style="display: contents;">
+                    <button class="btn btn-red labeled-btn" data-val="Cl">
+                        <span class="sub-label">ON</span>CE
+                    </button>
+                </form>
+                
                 <!-- РЯДОК 2 -->
                 <button class="btn btn-light" data-val="next">NEXT ▼</button>
                 <button class="btn btn-light text-green" data-val="correct">CORRECT</button>

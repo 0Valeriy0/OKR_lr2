@@ -287,7 +287,7 @@ namespace OKR_lr2_1.Controllers
 
         [HttpGet("RecallClearMemory")]
         public IActionResult RecallClearMemory(string? currentExpression = null)
-        {
+        {      
             // Друге поспіль натискання, якщо стан пам'яті вже викликаний і рядок між цим не редагувався
             bool isConsecutiveRecall = isMemoryRecalled && (currentExpression == null || currentExpression == lastRecalledExpression);
 
@@ -390,6 +390,12 @@ namespace OKR_lr2_1.Controllers
             lastRecalledExpression = null;
             memory = 0;
             return RedirectToAction("Index");
+        }
+
+        [HttpGet("Close")]
+        public IActionResult Close()
+        {
+            return RedirectToAction("Leave");
         }
     }
 }
