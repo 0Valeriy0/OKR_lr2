@@ -1,4 +1,4 @@
-﻿document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
     const display = document.getElementById('display');
     const keypad = document.querySelector('.keypad-grid');
     const hiddenExpression = document.getElementById('hiddenExpression');
@@ -9,6 +9,13 @@
     const operators = ['+', '-', '*', '/', '%'];
     let currentExpression = serverResult && serverResult.value ? serverResult.value : '0';
 
+    function isSpecialState(expr) {
+        return expr === '0' 
+            || expr === 'Помилка' 
+            || expr.startsWith('Для роботи з пам')
+            || expr === 'Вираз не може бути порожнім';
+    }
+
     function updateDisplay() {
         display.innerText = currentExpression;
 
@@ -17,13 +24,18 @@
             hiddenExpression.value = currentExpression;
         }
 
-        // Оновлюємо поля для M+ та M-, намагаючись перетворити поточний вираз на число
+        // Оновлюємо приховані поля з поточним виразом для RecallClearMemory, MemoryPlus, MemoryMinus
+        document.querySelectorAll('.hidden-expression-input').forEach(input => {
+            input.value = currentExpression;
+        });
+
+        // Заповнюємо значення для форми пам'яті лише якщо це одиночне число
         document.querySelectorAll('.hidden-value').forEach(input => {
-            try {
-                // Якщо на екрані "2+2", воно порахує 4, щоб відправити в контролер (double value)
-                input.value = eval(currentExpression) || 0;
-            } catch (e) {
-                input.value = 0;
+            const trimmed = currentExpression.trim().replace(',', '.');
+            if (/^[+-]?\d+(\.\d+)?$/.test(trimmed)) {
+                input.value = parseFloat(trimmed);
+            } else {
+                input.value = '';
             }
         });
     }
@@ -52,8 +64,10 @@
             return;
         }
 
+        const inSpecial = isSpecialState(currentExpression);
+
         if (val === 'backspace') {
-            if (currentExpression.length > 1 && currentExpression !== 'Помилка') {
+            if (currentExpression.length > 1 && !inSpecial) {
                 currentExpression = currentExpression.slice(0, -1);
             } else {
                 currentExpression = '0';
@@ -72,13 +86,18 @@
             return;
         }
 
+        // Обмеження: вводити можна лише якщо кількість символів менше 16
+        if (currentExpression.length >= 16 && !inSpecial) {
+            return;
+        }
+
         const lastChar = currentExpression.slice(-1);
 
         // Захист від подвійних операторів підряд (включаючи %)
         if (operators.includes(val)) {
             // Виняток: якщо це мінус як перший символ або після дужки (від'ємне число)
-            if (val === '-' && (currentExpression === '0' || lastChar === '(')) {
-                if (currentExpression === '0') {
+            if (val === '-' && (inSpecial || lastChar === '(')) {
+                if (inSpecial) {
                     currentExpression = '-';
                 } else {
                     currentExpression += '-';
@@ -106,8 +125,8 @@
             }
 
             // Якщо крапку тиснуть одразу після операції або дужки — додаємо "0."
-            if (operators.includes(lastChar) || lastChar === '(' || currentExpression === '0') {
-                if (currentExpression === '0') {
+            if (operators.includes(lastChar) || lastChar === '(' || inSpecial) {
+                if (inSpecial) {
                     currentExpression = '0.';
                 } else {
                     currentExpression += '0.';
@@ -117,12 +136,12 @@
             }
         }
 
-        // Обробка початкового стану "0" або "Помилка"
-        if (currentExpression === '0' || currentExpression === 'Помилка') {
+        // Обробка початкового стану "0", помилки або повідомлення
+        if (inSpecial) {
             if (val === '.') {
                 currentExpression = '0.';
             } else if (operators.includes(val)) {
-                currentExpression += val;
+                currentExpression = '0' + val;
             } else {
                 currentExpression = val;
             }

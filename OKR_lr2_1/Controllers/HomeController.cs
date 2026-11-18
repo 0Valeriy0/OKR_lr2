@@ -13,20 +13,40 @@ namespace OKR_lr2_1.Controllers
         static double? savedResult;
         static double memory = 0;
         static bool isMemoryRecalled = false;
+        static string? lastRecalledExpression = null;
         static double taxRate = 0;
         static List<string> history = new List<string>();
         static int historyIndex = -1;
+
+        public static bool HasMemory => memory != 0;
 
         [HttpGet("Index")]
         [HttpGet("~/")]
         public IActionResult Index()
         {
+            ViewBag.HasMemory = memory != 0;
             return View();
         }
 
         [HttpGet("Calculate")]
         public IActionResult Calculate(string expression)
         {
+            isMemoryRecalled = false;
+            lastRecalledExpression = null;
+
+            if (string.IsNullOrWhiteSpace(expression))
+            {
+                Expression emptyExp = new Expression
+                {
+                    ExpressionText = expression ?? "",
+                    IsError = true,
+                    Error = "Вираз не може бути порожнім"
+                };
+                ViewData["Result"] = emptyExp;
+                ViewBag.HasMemory = memory != 0;
+                return View("Index");
+            }
+
             Expression exp = new Expression { ExpressionText = expression };
 
             try
@@ -54,6 +74,7 @@ namespace OKR_lr2_1.Controllers
             }
 
             ViewData["Result"] = exp;
+            ViewBag.HasMemory = memory != 0;
             return View("Index");
         }
 
@@ -153,6 +174,7 @@ namespace OKR_lr2_1.Controllers
         public IActionResult GetSavedResult()
         {
             ViewBag.Saved = savedResult;
+            ViewBag.HasMemory = memory != 0;
             return View("Index");
         }
 
@@ -167,6 +189,7 @@ namespace OKR_lr2_1.Controllers
         {
             if (historyIndex > 0) historyIndex--;
             ViewBag.HistoryExpression = history.Count > 0 ? history[historyIndex] : null;
+            ViewBag.HasMemory = memory != 0;
             return View("Index");
         }
 
@@ -175,6 +198,7 @@ namespace OKR_lr2_1.Controllers
         {
             if (historyIndex < history.Count - 1) historyIndex++;
             ViewBag.HistoryExpression = history.Count > 0 ? history[historyIndex] : null;
+            ViewBag.HasMemory = memory != 0;
             return View("Index");
         }
 
@@ -182,6 +206,7 @@ namespace OKR_lr2_1.Controllers
         public IActionResult AutoReplay()
         {
             ViewBag.FullHistory = history;
+            ViewBag.HasMemory = memory != 0;
             return View("Index");
         }
 
@@ -196,35 +221,138 @@ namespace OKR_lr2_1.Controllers
         }
 
         [HttpPost("MemoryPlus")]
-        public IActionResult MemoryPlus(double value)
+        public IActionResult MemoryPlus(double? value = null, string? expression = null)
         {
-            memory += value;
-            isMemoryRecalled = false;
-            return RedirectToAction("Index");
+            return HandleMemoryChange(value, expression, isPlus: true);
         }
 
         [HttpPost("MemoryMinus")]
-        public IActionResult MemoryMinus(double value)
+        public IActionResult MemoryMinus(double? value = null, string? expression = null)
         {
-            memory -= value;
-            isMemoryRecalled = false;
-            return RedirectToAction("Index");
+            return HandleMemoryChange(value, expression, isPlus: false);
         }
 
-        [HttpGet("RecallClearMemory")]
-        public IActionResult RecallClearMemory()
+        private IActionResult HandleMemoryChange(double? value, string? expression, bool isPlus)
         {
-            if (isMemoryRecalled)
+            // 1. Прямий виклик з юніт-тестів, якщо передано лише числовий аргумент value
+            if (value.HasValue && string.IsNullOrEmpty(expression))
             {
-                memory = 0;
+                if (isPlus) memory += value.Value;
+                else memory -= value.Value;
+
                 isMemoryRecalled = false;
-                ViewBag.MemoryState = "Cleared";
+                lastRecalledExpression = null;
+                return RedirectToAction("Index");
+            }
+
+            // 2. Виклик форми з інтерфейсу (передається expression з екрана)
+            string raw = (expression ?? "").Trim().Replace(',', '.');
+
+            // Перевіряємо, чи є вираз чистим одиночним числом без операторів
+            if (Regex.IsMatch(raw, @"^[+-]?\d+(\.\d+)?$") && double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out double num))
+            {
+                if (isPlus) memory += num;
+                else memory -= num;
+
+                isMemoryRecalled = false;
+                lastRecalledExpression = null;
+
+                ViewBag.MemoryValue = memory;
+                ViewBag.HasMemory = memory != 0;
+                ViewData["Result"] = new Expression
+                {
+                    ExpressionText = expression ?? "",
+                    Result = num,
+                    IsError = false
+                };
+                return View("Index");
             }
             else
             {
-                isMemoryRecalled = true;
+                // Не є одиночним числом: повідомляємо про це на екрані
+                string errorMsg = "Для роботи з пам'яттю потрібне число без інших виразів";
+                Expression exp = new Expression
+                {
+                    ExpressionText = expression ?? "",
+                    IsError = true,
+                    Error = errorMsg
+                };
+                ViewData["Result"] = exp;
+                ViewBag.ErrorMessage = errorMsg;
                 ViewBag.MemoryValue = memory;
+                ViewBag.HasMemory = memory != 0;
+                return View("Index");
             }
+        }
+
+        [HttpGet("RecallClearMemory")]
+        public IActionResult RecallClearMemory(string? currentExpression = null)
+        {
+            // Друге поспіль натискання, якщо стан пам'яті вже викликаний і рядок між цим не редагувався
+            bool isConsecutiveRecall = isMemoryRecalled && (currentExpression == null || currentExpression == lastRecalledExpression);
+
+            if (isConsecutiveRecall)
+            {
+                // Очищення пам'яті
+                memory = 0;
+                isMemoryRecalled = false;
+                lastRecalledExpression = null;
+
+                ViewBag.MemoryState = "Cleared";
+                ViewBag.HasMemory = false;
+
+                Expression exp = new Expression
+                {
+                    ExpressionText = currentExpression ?? "0",
+                    Result = 0,
+                    IsError = false
+                };
+                ViewData["Result"] = exp;
+                ViewBag.CurrentExpression = currentExpression ?? "0";
+            }
+            else
+            {
+                // Перший виклик пам'яті (або після інших операцій)
+                isMemoryRecalled = true;
+                string memStr = memory.ToString(CultureInfo.InvariantCulture);
+
+                string newExpr;
+                if (string.IsNullOrWhiteSpace(currentExpression)
+                    || currentExpression == "0"
+                    || currentExpression == "Помилка"
+                    || currentExpression.StartsWith("Для роботи з пам"))
+                {
+                    newExpr = memStr;
+                }
+                else
+                {
+                    // Дописуємо значення пам'яті в рядок, не перевищуючи 16 символів
+                    if ((currentExpression + memStr).Length <= 16)
+                    {
+                        newExpr = currentExpression + memStr;
+                    }
+                    else
+                    {
+                        int fit = 16 - currentExpression.Length;
+                        newExpr = fit > 0 ? currentExpression + memStr.Substring(0, fit) : currentExpression;
+                    }
+                }
+
+                lastRecalledExpression = newExpr;
+
+                ViewBag.MemoryValue = memory;
+                ViewBag.HasMemory = memory != 0;
+                ViewBag.CurrentExpression = newExpr;
+
+                Expression exp = new Expression
+                {
+                    ExpressionText = newExpr,
+                    Result = memory,
+                    IsError = false
+                };
+                ViewData["Result"] = exp;
+            }
+
             return View("Index");
         }
 
@@ -239,6 +367,7 @@ namespace OKR_lr2_1.Controllers
         public IActionResult RecallTaxRate()
         {
             ViewBag.TaxRate = taxRate;
+            ViewBag.HasMemory = memory != 0;
             return View("Index");
         }
 
@@ -247,6 +376,7 @@ namespace OKR_lr2_1.Controllers
         {
             double taxAmount = value * (taxRate / 100);
             ViewBag.TaxResult = addTax ? value + taxAmount : value - taxAmount;
+            ViewBag.HasMemory = memory != 0;
             return View("Index");
         }
 
@@ -257,6 +387,8 @@ namespace OKR_lr2_1.Controllers
             history.Clear();
             historyIndex = -1;
             isMemoryRecalled = false;
+            lastRecalledExpression = null;
+            memory = 0;
             return RedirectToAction("Index");
         }
     }
